@@ -13,32 +13,49 @@ const usersBySocket = new Map(); // socket.id -> username
 const socketsByUser = new Map(); // username -> socket.id
 
 io.on('connection', (socket) => {
-  console.log('Connected:', socket.id);
+  console.log('✨ User connected:', socket.id);
 
   socket.on('join', (username) => {
     usersBySocket.set(socket.id, username);
     socketsByUser.set(username, socket.id);
     socket.username = username;
 
+    // Broadcast to others (not the new user)
     socket.broadcast.emit(
       'user connected',
-      `${username} joined the chat`
+      `🎉 ${username} joined the chat!`
     );
 
+    // Send updated user list to everyone
     io.emit('online users', Array.from(socketsByUser.keys()));
   });
 
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);
+  // 📝 Typing indicator
+  socket.on('typing', () => {
+    socket.broadcast.emit('user typing', socket.username);
   });
 
-  // 🔐 PRIVATE MESSAGE
+  socket.on('stop typing', () => {
+    socket.broadcast.emit('stop typing');
+  });
+
+  // 💬 Chat message
+  socket.on('chat message', (msg) => {
+    const username = socket.username || 'Anonymous';
+    const formattedMsg = `${username}: ${msg}`;
+    io.emit('chat message', formattedMsg);
+  });
+
+  // 🔐 Private message
   socket.on('private message', ({ to, message }) => {
     const targetSocketId = socketsByUser.get(to);
     if (!targetSocketId) return;
 
+    const from = socket.username || 'Unknown';
+    
+    // Send to recipient
     io.to(targetSocketId).emit('private message', {
-      from: socket.username,
+      from,
       message
     });
   });
@@ -52,17 +69,18 @@ io.on('connection', (socket) => {
 
       socket.broadcast.emit(
         'user disconnected',
-        `${username} left the chat`
+        `👋 ${username} left the chat`
       );
 
       io.emit('online users', Array.from(socketsByUser.keys()));
     }
 
-    console.log('Disconnected:', socket.id);
+    console.log('❌ User disconnected:', socket.id);
   });
 });
 
 const PORT = 3000;
 server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log('✨ Chat Hub is ready for connections!');
 });
