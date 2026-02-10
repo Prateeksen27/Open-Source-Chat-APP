@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Chat</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      display: flex;
+      gap: 20px;
+    }
+
+    #chat { flex: 3; }
+    #online { flex: 1; border: 1px solid #ddd; padding: 10px; }
+
+    #online ul { list-style: none; padding: 0; }
+    #online li { padding: 6px; cursor: pointer; }
+    #online li:hover { background: #eee; }
+
+    #online li.active {
+      background: #4CAF50;
+      color: white;
+    }
+
+    #messages {
+      list-style: none;
+      height: 400px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      overflow-y: auto;
+    }
+
+    #messages li.system { font-style: italic; color: gray; }
+    #messages li.dm { color: #6a1b9a; }
+
+    #form { display: flex; margin-top: 10px; }
+    #input { flex: 1; padding: 10px; }
+
+    button {
+      padding: 10px;
+      margin-left: 10px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="chat">
+  <h2>Chat</h2>
+  <ul id="messages"></ul>
+
+  <form id="form">
+    <input id="input" placeholder="Type message..." />
+    <button type="submit">Send</button>
+  </form>
+</div>
+
+<div id="online">
+  <div style="display: flex;justify-content: space-between;">
+    <h2>Online Users</h2>
+    <button id="shift" style="width: auto;height: auto;border-radius: 10px;cursor: pointer;">Shift to Public</button>
+  </div>
+
+  <ul id="online-users">
+  </ul>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  let name = sessionStorage.getItem('chat_username');
+  if (!name) {
+    name = prompt('Enter your name') || 'Anonymous';
+    sessionStorage.setItem('chat_username', name);
+  }
+
+  let privateTo = null;
+
+  document.getElementById('shift').onclick = () => {
+    privateTo = null;
+    document.querySelectorAll('#online li')
+      .forEach(x => x.classList.remove('active'));
+  };
+
+  const messages = document.getElementById('messages');
+  const form = document.getElementById('form');
+  const input = document.getElementById('input');
+  const onlineList = document.getElementById('online-users');
+
+  socket.emit('join', name);
+
+  // ---------- SEND ----------
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (privateTo) {
+      socket.emit('private message', {
+        to: privateTo,
+        message: text
+      });
+
+      addMessage(`(DM to ${privateTo}): ${text}`, 'dm');
+    } else {
+      socket.emit('chat message', `${name}: ${text}`);
+    }
+
+    input.value = '';
+  });
+
+  // ---------- RECEIVE ----------
+  socket.on('chat message', (msg) => {
+    addMessage(msg);
+  });
+
+  socket.on('private message', ({ from, message }) => {
+    addMessage(`(DM from ${from}): ${message}`, 'dm');
+  });
+
+  socket.on('user connected', (msg) => addMessage(msg, 'system'));
+  socket.on('user disconnected', (msg) => addMessage(msg, 'system'));
+
+  // ---------- ONLINE USERS ----------
+  socket.on('online users', (users) => {
+    onlineList.innerHTML = '';
+    users.forEach(user => {
+      if (user === name) return;
+
+      const li = document.createElement('li');
+      li.textContent = user;
+
+      if (user === privateTo) li.classList.add('active');
+
+      li.onclick = () => {
+        privateTo = user;
+        document.querySelectorAll('#online li')
+          .forEach(x => x.classList.remove('active'));
+        li.classList.add('active');
+      };
+
+      onlineList.appendChild(li);
+    });
+  });
+
+  function addMessage(text, cls) {
+    const li = document.createElement('li');
+    li.textContent = text;
+    if (cls) li.className = cls;
+    messages.appendChild(li);
+    messages.scrollTop = messages.scrollHeight;
+  }
+</script>
+
+</body>
+</html>
