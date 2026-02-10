@@ -18,51 +18,90 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
       min-height: 100vh;
       padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
     }
 
-    .container {
+    .main-container {
       display: flex;
       gap: 20px;
-      max-width: 1200px;
-      width: 100%;
-      height: 90vh;
+      max-width: 1400px;
+      margin: 0 auto;
+      height: calc(100vh - 40px);
     }
 
-    /* Main Chat Area */
-    #chat {
+    /* Single Chat Window */
+    #chat-window {
       flex: 3;
       background: rgba(255, 255, 255, 0.95);
       border-radius: 24px;
       padding: 24px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
       display: flex;
       flex-direction: column;
-      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
     }
 
-    #chat h2 {
+    #chat-window.private-mode {
+      border: 3px solid #9c27b0;
+    }
+
+    #chat-window h2 {
       font-family: 'Fredoka One', cursive;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
       font-size: 28px;
       margin-bottom: 16px;
       display: flex;
       align-items: center;
       gap: 10px;
+      transition: all 0.3s;
     }
 
-    #chat h2::before {
+    #chat-window h2.public-title {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    #chat-window h2.private-title {
+      background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    #chat-window h2.public-title::before {
       content: '💬';
       -webkit-text-fill-color: initial;
     }
 
-    #messages {
-      list-style: none;
+    #chat-window h2.private-title::before {
+      content: '💬';
+      -webkit-text-fill-color: initial;
+    }
+
+    #chat-header-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    #back-to-public {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      font-size: 14px;
+      display: none;
+    }
+
+    #current-chat-info {
+      font-size: 14px;
+      color: #9c27b0;
+      font-weight: 500;
+      display: none;
+    }
+
+    .messages-container {
       flex: 1;
       border: 2px solid #eee;
       border-radius: 16px;
@@ -72,16 +111,16 @@
       margin-bottom: 16px;
     }
 
-    #messages::-webkit-scrollbar {
+    .messages-container::-webkit-scrollbar {
       width: 8px;
     }
 
-    #messages::-webkit-scrollbar-track {
+    .messages-container::-webkit-scrollbar-track {
       background: #f1f1f1;
       border-radius: 4px;
     }
 
-    #messages::-webkit-scrollbar-thumb {
+    .messages-container::-webkit-scrollbar-thumb {
       background: linear-gradient(135deg, #667eea, #764ba2);
       border-radius: 4px;
     }
@@ -126,8 +165,21 @@
       border-left: 4px solid #9c27b0;
     }
 
-    #messages li:not(.system) {
+    #messages li.sent {
+      background: linear-gradient(135deg, #9c27b0, #ce93d8);
+      color: white;
+      margin-left: 20%;
+      border-left: none;
+      border-right: 4px solid #7b1fa2;
+    }
+
+    #messages li.received {
       background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      margin-right: 20%;
+    }
+
+    #messages li:not(.system) {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
@@ -165,6 +217,11 @@
     #input:focus {
       border-color: #667eea;
       box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    }
+
+    #chat-window.private-mode #input:focus {
+      border-color: #9c27b0;
+      box-shadow: 0 0 0 4px rgba(156, 39, 176, 0.2);
     }
 
     button {
@@ -205,15 +262,6 @@
       flex-direction: column;
     }
 
-    #online .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
     #online h2 {
       font-family: 'Fredoka One', cursive;
       font-size: 24px;
@@ -221,6 +269,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      margin-bottom: 16px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -229,13 +278,6 @@
     #online h2::before {
       content: '👥';
       -webkit-text-fill-color: initial;
-    }
-
-    #shift {
-      padding: 10px 16px;
-      font-size: 12px;
-      background: linear-gradient(135deg, #11998e, #38ef7d);
-      box-shadow: 0 4px 15px rgba(56, 239, 125, 0.4);
     }
 
     #online-users {
@@ -400,20 +442,25 @@
     /* Responsive */
     @media (max-width: 768px) {
       body { padding: 10px; }
-      .container { flex-direction: column; height: auto; }
-      #chat, #online { flex: none; }
-      #chat { order: 2; }
-      #online { order: 1; }
+      .main-container { flex-direction: column; }
+      #chat-window, #online { flex: none; }
     }
   </style>
 </head>
 <body>
   <canvas id="confetti"></canvas>
 
-  <div class="container">
-    <div id="chat">
-      <h2>Chat Hub</h2>
+  <div class="main-container">
+    <div id="chat-window">
+      <h2 id="chat-title" class="public-title">Chat Hub</h2>
       
+      <div id="chat-header-info">
+        <button id="back-to-public">
+          <i class="fas fa-arrow-left"></i> Public Chat
+        </button>
+        <span id="current-chat-info"></span>
+      </div>
+
       <div class="emoji-bar">
         <button onclick="addEmoji('😀')">😀</button>
         <button onclick="addEmoji('😂')">😂</button>
@@ -432,7 +479,9 @@
         <button onclick="addEmoji('👋')">👋</button>
       </div>
 
-      <ul id="messages"></ul>
+      <div class="messages-container">
+        <ul id="messages"></ul>
+      </div>
 
       <div id="typing-indicator" class="typing" style="display: none;">
         <span></span><span></span><span></span>
@@ -447,12 +496,7 @@
     </div>
 
     <div id="online">
-      <div class="header">
-        <h2>Online</h2>
-        <button id="shift">
-          <i class="fas fa-globe"></i> Public
-        </button>
-      </div>
+      <h2>Online Users</h2>
       <ul id="online-users"></ul>
     </div>
   </div>
@@ -517,16 +561,18 @@
     // Audio Context for notification sound
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playNotification() {
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.3);
+      try {
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.3);
+      } catch(e) {}
     }
 
     const socket = io();
@@ -540,24 +586,24 @@
     }
 
     let privateTo = null;
+    let isPrivateMode = false;
 
-    document.getElementById('shift').onclick = () => {
-      privateTo = null;
-      document.querySelectorAll('#online li')
-        .forEach(x => x.classList.remove('active'));
-      showToast('🌐 Switched to public chat');
-    };
-
-    const messages = document.getElementById('messages');
+    // DOM Elements
+    const chatWindow = document.getElementById('chat-window');
+    const chatTitle = document.getElementById('chat-title');
+    const messagesList = document.getElementById('messages');
     const form = document.getElementById('form');
     const input = document.getElementById('input');
     const onlineList = document.getElementById('online-users');
     const typingIndicator = document.getElementById('typing-indicator');
+    const backToPublicBtn = document.getElementById('back-to-public');
+    const currentChatInfo = document.getElementById('current-chat-info');
 
     socket.emit('join', name);
 
-    function getTime() {
-      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    function getTime(timestamp) {
+      const date = timestamp ? new Date(timestamp) : new Date();
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
     function addEmoji(emoji) {
@@ -565,33 +611,89 @@
       input.focus();
     }
 
-    function addMessage(text, cls, sender) {
+    function addMessage(text, cls, timestamp) {
       const li = document.createElement('li');
-      
-      if (sender) {
-        li.innerHTML = `<span class="sender">${sender}</span><br>${text}<span class="time">${getTime()}</span>`;
-      } else {
-        li.innerHTML = `${text}<span class="time">${getTime()}</span>`;
-      }
-      
+      li.innerHTML = `${text}<span class="time">${getTime(timestamp)}</span>`;
       if (cls) li.className = cls;
-      messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight;
+      messagesList.appendChild(li);
+      messagesList.scrollTop = messagesList.scrollHeight;
       playNotification();
     }
+
+    function switchToPublic() {
+      isPrivateMode = false;
+      privateTo = null;
+      
+      // Update UI
+      chatWindow.classList.remove('private-mode');
+      chatTitle.classList.remove('private-title');
+      chatTitle.classList.add('public-title');
+      chatTitle.textContent = 'Chat Hub';
+      backToPublicBtn.style.display = 'none';
+      currentChatInfo.style.display = 'none';
+      input.placeholder = 'Type your message...';
+      
+      // Clear messages and load public messages
+      messagesList.innerHTML = '';
+      
+      // Update online list active state
+      document.querySelectorAll('#online li').forEach(li => {
+        li.classList.remove('active');
+      });
+    }
+
+    function switchToPrivate(user) {
+      isPrivateMode = true;
+      privateTo = user;
+      
+      // Update UI
+      chatWindow.classList.add('private-mode');
+      chatTitle.classList.remove('public-title');
+      chatTitle.classList.add('private-title');
+      chatTitle.textContent = 'Private Chat';
+      backToPublicBtn.style.display = 'flex';
+      currentChatInfo.style.display = 'inline';
+      currentChatInfo.textContent = `💬 ${user}`;
+      input.placeholder = `Message ${user}...`;
+      
+      // Clear messages and load private chat
+      messagesList.innerHTML = '';
+      
+      // Load chat history
+      socket.emit('get chat history', { with: user });
+      
+      // Update online list active state
+      document.querySelectorAll('#online li').forEach(li => {
+        li.classList.remove('active');
+        if (li.querySelector('span')?.textContent === user) {
+          li.classList.add('active');
+        }
+      });
+      
+      input.focus();
+    }
+
+    // Back to public button
+    backToPublicBtn.onclick = () => {
+      switchToPublic();
+      showToast('🌐 Back to public chat');
+    };
 
     // Typing indicator
     let typingTimeout;
     input.addEventListener('input', () => {
-      socket.emit('typing');
+      socket.emit('typing', { to: privateTo });
       clearTimeout(typingTimeout);
       typingTimeout = setTimeout(() => {
-        socket.emit('stop typing');
+        socket.emit('stop typing', { to: privateTo });
       }, 1000);
     });
 
     socket.on('user typing', (user) => {
-      if (user !== name) {
+      if (privateTo === user && isPrivateMode) {
+        typingIndicator.style.display = 'flex';
+        typingIndicator.innerHTML = `<span></span><span></span><span></span> ${user} is typing...`;
+      } else {
         typingIndicator.style.display = 'flex';
         typingIndicator.innerHTML = `<span></span><span></span><span></span> ${user} is typing...`;
       }
@@ -601,40 +703,70 @@
       typingIndicator.style.display = 'none';
     });
 
-    // SEND - Only emit, don't add locally (server will broadcast back)
+    // SEND
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = input.value.trim();
       if (!text) return;
 
-      if (privateTo) {
-        socket.emit('private message', {
-          to: privateTo,
-          message: text
-        });
+      if (isPrivateMode && privateTo) {
+        socket.emit('private message', { to: privateTo, message: text });
       } else {
         socket.emit('chat message', text);
       }
 
       input.value = '';
-      socket.emit('stop typing');
+      socket.emit('stop typing', { to: privateTo });
     });
 
-    // RECEIVE - Messages are added here only
+    // RECEIVE (Public)
     socket.on('chat message', (msg) => {
-      addMessage(msg);
+      if (!isPrivateMode) {
+        addMessage(msg);
+      }
     });
 
-    socket.on('private message', ({ from, message }) => {
-      addMessage(`💌 ${from}: ${message}`, 'dm');
+    // RECEIVE (Private)
+    socket.on('private message', ({ from, message, timestamp }) => {
+      if (from === 'You' || from === name) {
+        // Message sent by us
+        if (isPrivateMode) {
+          addMessage(message, 'sent', timestamp);
+        }
+      } else {
+        // Message received from someone
+        if (isPrivateMode && privateTo === from) {
+          addMessage(message, 'received', timestamp);
+        } else {
+          // Switch to this private chat
+          switchToPrivate(from);
+          addMessage(message, 'received', timestamp);
+          showToast(`💬 New message from ${from}`);
+        }
+      }
     });
 
     socket.on('user connected', (msg) => {
-      addMessage(msg, 'system');
+      if (!isPrivateMode) {
+        addMessage(msg, 'system');
+      }
       showToast('👋 Someone joined!');
     });
 
-    socket.on('user disconnected', (msg) => addMessage(msg, 'system'));
+    socket.on('user disconnected', (msg) => {
+      if (!isPrivateMode) {
+        addMessage(msg, 'system');
+      }
+    });
+
+    // Chat history
+    socket.on('chat history', ({ with: user, messages: history }) => {
+      messagesList.innerHTML = '';
+      history.forEach(msg => {
+        const isSent = msg.from === name || msg.from === 'You';
+        addMessage(msg.message, isSent ? 'sent' : 'received', msg.timestamp);
+      });
+    });
 
     // ONLINE USERS
     socket.on('online users', (users) => {
@@ -654,10 +786,11 @@
         if (user === privateTo) li.classList.add('active');
 
         li.onclick = () => {
-          privateTo = user;
-          document.querySelectorAll('#online li')
-            .forEach(x => x.classList.remove('active'));
-          li.classList.add('active');
+          if (isPrivateMode && privateTo === user) {
+            // Already in this chat
+            return;
+          }
+          switchToPrivate(user);
           showToast(`💬 Chatting with ${user}`);
         };
 
@@ -665,15 +798,10 @@
       });
     });
 
-    // Emoji reactions
-    socket.on('reaction', ({ messageId, emoji }) => {
-      const msgEl = messages.children[messageId];
-      if (msgEl) {
-        const reaction = document.createElement('span');
-        reaction.textContent = emoji;
-        reaction.style.cssText = 'position: absolute; bottom: -5px; right: 30px; font-size: 16px;';
-        msgEl.appendChild(reaction);
-      }
+    // Handle window resize for confetti
+    window.addEventListener('resize', () => {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
     });
   </script>
 </body>
