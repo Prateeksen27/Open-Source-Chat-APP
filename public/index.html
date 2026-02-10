@@ -320,6 +320,17 @@
       box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     }
 
+    #online-users li.unread {
+      background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+      border: 2px solid #ff9800;
+      animation: pulseUnread 2s infinite;
+    }
+
+    @keyframes pulseUnread {
+      0%, 100% { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+      50% { box-shadow: 0 4px 20px rgba(255, 152, 0, 0.4); }
+    }
+
     #online-users li .avatar {
       width: 36px;
       height: 36px;
@@ -336,6 +347,27 @@
     #online-users li.active .avatar {
       background: white;
       color: #667eea;
+    }
+
+    #online-users li .unread-badge {
+      background: #ff9800;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: auto;
+      display: none;
+    }
+
+    #online-users li.unread .unread-badge {
+      display: block;
+      animation: bounce 0.5s ease;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
     }
 
     #online-users li .status {
@@ -587,6 +619,7 @@
 
     let privateTo = null;
     let isPrivateMode = false;
+    const unreadMessages = new Map(); // user -> count
 
     // DOM Elements
     const chatWindow = document.getElementById('chat-window');
@@ -646,6 +679,10 @@
       isPrivateMode = true;
       privateTo = user;
       
+      // Clear unread count
+      unreadMessages.delete(user);
+      updateUnreadBadges();
+      
       // Update UI
       chatWindow.classList.add('private-mode');
       chatTitle.classList.remove('public-title');
@@ -671,6 +708,42 @@
       });
       
       input.focus();
+    }
+
+    function updateUnreadBadges() {
+      document.querySelectorAll('#online-users li').forEach(li => {
+        const user = li.querySelector('span')?.textContent;
+        const count = unreadMessages.get(user) || 0;
+        const badge = li.querySelector('.unread-badge');
+        
+        if (count > 0) {
+          li.classList.add('unread');
+          badge.textContent = count;
+        } else {
+          li.classList.remove('unread');
+          badge.textContent = '';
+        }
+      });
+    }
+
+    function showUnreadNotification(sender) {
+      // Show toast notification
+      showToast(`💬 New message from ${sender}`);
+      
+      // Highlight user in online list
+      document.querySelectorAll('#online-users li').forEach(li => {
+        if (li.querySelector('span')?.textContent === sender) {
+          li.classList.add('unread');
+          const badge = li.querySelector('.unread-badge') || document.createElement('span');
+          badge.className = 'unread-badge';
+          const current = unreadMessages.get(sender) || 0;
+          unreadMessages.set(sender, current + 1);
+          badge.textContent = unreadMessages.get(sender);
+          if (!li.querySelector('.unread-badge')) {
+            li.appendChild(badge);
+          }
+        }
+      });
     }
 
     // Back to public button
@@ -726,11 +799,11 @@
       }
     });
 
-    // RECEIVE (Private)
+    // RECEIVE (Private) - Don't switch automatically
     socket.on('private message', ({ from, message, timestamp }) => {
       if (from === 'You' || from === name) {
         // Message sent by us
-        if (isPrivateMode) {
+        if (isPrivateMode && privateTo === from) {
           addMessage(message, 'sent', timestamp);
         }
       } else {
@@ -738,10 +811,13 @@
         if (isPrivateMode && privateTo === from) {
           addMessage(message, 'received', timestamp);
         } else {
-          // Switch to this private chat
-          switchToPrivate(from);
-          addMessage(message, 'received', timestamp);
-          showToast(`💬 New message from ${from}`);
+          // Show notification and mark as unread
+          showUnreadNotification(from);
+          
+          // Save message for when user opens the chat
+          const history = JSON.parse(sessionStorage.getItem(`chat_${name}_${from}`) || '[]');
+          history.push({ from, message, timestamp });
+          sessionStorage.setItem(`chat_${name}_${from}`, JSON.stringify(history.slice(-50)));
         }
       }
     });
@@ -762,9 +838,21 @@
     // Chat history
     socket.on('chat history', ({ with: user, messages: history }) => {
       messagesList.innerHTML = '';
-      history.forEach(msg => {
-        const isSent = msg.from === name || msg.from === 'You';
-        addMessage(msg.message, isSent ? 'sent' : 'received', msg.timestamp);
+      
+      // Also load from session storage
+      const saved = JSON.parse(sessionStorage.getItem(`chat_${name}_${user}`) || '[]');
+      
+      // Merge and deduplicate
+      const allMessages = [...history, ...saved];
+      const seen = new Set();
+      
+      allMessages.forEach(msg => {
+        const key = `${msg.from}-${msg.message}-${msg.timestamp}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          const isSent = msg.from === name || msg.from === 'You';
+          addMessage(msg.message, isSent ? 'sent' : 'received', msg.timestamp);
+        }
       });
     });
 
@@ -776,20 +864,22 @@
 
         const li = document.createElement('li');
         const initial = user.charAt(0).toUpperCase();
+        const unreadCount = unreadMessages.get(user) || 0;
         
         li.innerHTML = `
           <div class="avatar">${initial}</div>
           <span>${user}</span>
+          <span class="unread-badge">${unreadCount}</span>
           <div class="status"></div>
         `;
+
+        if (unreadCount > 0) {
+          li.classList.add('unread');
+        }
 
         if (user === privateTo) li.classList.add('active');
 
         li.onclick = () => {
-          if (isPrivateMode && privateTo === user) {
-            // Already in this chat
-            return;
-          }
           switchToPrivate(user);
           showToast(`💬 Chatting with ${user}`);
         };
