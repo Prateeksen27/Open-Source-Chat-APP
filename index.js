@@ -46,7 +46,7 @@ io.on('connection', (socket) => {
     io.emit('chat message', formattedMsg);
   });
 
-  // 🔐 Private message
+  // 🔐 Private message - Send to recipient AND back to sender
   socket.on('private message', ({ to, message }) => {
     const targetSocketId = socketsByUser.get(to);
     if (!targetSocketId) return;
@@ -56,6 +56,12 @@ io.on('connection', (socket) => {
     // Send to recipient
     io.to(targetSocketId).emit('private message', {
       from,
+      message
+    });
+    
+    // Also send back to sender so they see it
+    socket.emit('private message', {
+      from: 'You',
       message
     });
   });

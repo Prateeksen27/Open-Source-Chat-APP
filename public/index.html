@@ -601,7 +601,7 @@
       typingIndicator.style.display = 'none';
     });
 
-    // SEND
+    // SEND - Only emit, don't add locally (server will broadcast back)
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = input.value.trim();
@@ -612,23 +612,21 @@
           to: privateTo,
           message: text
         });
-        addMessage(`${text}`, 'dm');
       } else {
         socket.emit('chat message', text);
-        addMessage(text, '', name.split(' ')[0]);
       }
 
       input.value = '';
       socket.emit('stop typing');
     });
 
-    // RECEIVE
+    // RECEIVE - Messages are added here only
     socket.on('chat message', (msg) => {
       addMessage(msg);
     });
 
     socket.on('private message', ({ from, message }) => {
-      addMessage(`💌 From ${from}: ${message}`, 'dm');
+      addMessage(`💌 ${from}: ${message}`, 'dm');
     });
 
     socket.on('user connected', (msg) => {
